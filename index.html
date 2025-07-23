@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMC Tech - Complete AI Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .header-wave {
+            background: linear-gradient(to right, #8A2BE2, #6A0DAD);
+            border-bottom-left-radius: 50% 20%;
+            border-bottom-right-radius: 50% 20%;
+        }
+        .nav-btn.active { color: #8A2BE2; background-color: #f3e8ff; }
+        .timetable-select {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-image: none; border: 1px solid #e5e7eb;
+        }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #8A2BE2;
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app-container" class="container mx-auto max-w-md min-h-screen bg-white flex flex-col shadow-2xl">
+
+        <header id="app-header" class="header-wave text-white p-6 pt-10 h-40 hidden">
+            <h1 id="header-title" class="text-2xl font-bold text-center"></h1>
+            <p id="header-subtitle" class="text-center text-sm opacity-90"></p>
+        </header>
+
+        <div id="message-box" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 p-4 text-white rounded-lg shadow-lg"></div>
+
+        <main id="main-content" class="flex-grow p-4 overflow-y-auto"></main>
+
+        <nav id="bottom-nav" class="bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-2 hidden">
+            <div class="flex justify-around">
+                <button data-view="department" class="nav-btn flex flex-col items-center text-gray-500 p-2 rounded-lg w-20">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    <span class="text-xs">Home</span>
+                </button>
+                 <button data-view="studentManagement" class="nav-btn flex flex-col items-center text-gray-500 p-2 rounded-lg w-20">
+                    <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
+                    <span class="text-xs">Students</span>
+                </button>
+                 <button data-view="reports" class="nav-btn flex flex-col items-center text-gray-500 p-2 rounded-lg w-20">
+                    <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+                    <span class="text-xs">Reports</span>
+                </button>
+                 <button data-view="manage" class="nav-btn flex flex-col items-center text-gray-500 p-2 rounded-lg w-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span class="text-xs">Manage</span>
+                </button>
+            </div>
+        </nav>
+        
+        <div id="gemini-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold mb-2">✨ AI Attendance Analysis</h3>
+                <div id="gemini-modal-content" class="text-gray-700 max-h-64 overflow-y-auto"></div>
+                <button data-action="closeModal" class="mt-4 w-full bg-gray-200 py-2 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Application State ---
+        const state = {
+            db: null,
+            currentStaff: null,
+            selectedDept: null,
+            selectedYear: null,
+            currentView: 'login',
+        };
+
+        const DEPARTMENTS = ["Aeronautical", "AI & Data Science", "Biomedical", "Biotechnology", "Civil", "Computer Science", "Electrical", "Electronics & Comm.", "Information Technology", "Mechanical", "Mechatronics"];
+        
+        // --- UI Rendering Engine ---
+        const ui = {
+            mainContent: document.getElementById('main-content'),
+            header: document.getElementById('app-header'),
+            headerTitle: document.getElementById('header-title'),
+            headerSubtitle: document.getElementById('header-subtitle'),
+            bottomNav: document.getElementById('bottom-nav'),
+            messageBox: document.getElementById('message-box'),
+            geminiModal: document.getElementById('gemini-modal'),
+            geminiModalContent: document.getElementById('gemini-modal-content'),
+
+            templates: {
+                login: () => `
+                    <div class="view active flex flex-col h-full justify-center bg-gradient-to-b from-[#6A0DAD] to-[#8A2BE2] p-6 -m-4">
+                        <div class="bg-white/30 backdrop-blur-sm p-8 rounded-2xl shadow-lg text-center">
+                            <input id="login-username" type="text" placeholder="Staff Username" class="w-full p-3 mb-4 bg-white/50 rounded-lg placeholder-gray-600">
+                            <input id="login-password" type="password" placeholder="Password" class="w-full p-3 mb-6 bg-white/50 rounded-lg placeholder-gray-600">
+                            <button data-action="login" class="w-full bg-white text-[#6A0DAD] font-bold py-3 rounded-lg shadow-md mb-4">Login</button>
+                            <button data-view="register" class="w-full bg-[#8A2BE2] text-white font-bold py-3 rounded-lg shadow-md">Register New Staff</button>
+                        </div>
+                        <div class="text-center mt-10">
+                            <img src="/home/tharun/projects/present/images.png" alt="" class="w-32 mx-auto">
+                            <p class="text-center text-white text-sm mt-6">First time? <a href="#" data-view="dbManager" class="font-bold hover:underline">Setup/Load Database</a></p>
+                        </div>
+                    </div>`,
+                register: () => `
+                    <div class="view active flex flex-col h-full justify-center bg-gradient-to-b from-[#6A0DAD] to-[#8A2BE2] p-6 -m-4">
+                        <div class="bg-white/30 backdrop-blur-sm p-8 rounded-2xl shadow-lg text-center">
+                            <h2 class="text-white text-2xl font-bold mb-6">Staff Registration</h2>
+                            <input id="register-username" type="text" placeholder="Username" class="w-full p-3 mb-4 bg-white/50 rounded-lg placeholder-gray-600">
+                            <input id="register-email" type="email" placeholder="Email Address" class="w-full p-3 mb-4 bg-white/50 rounded-lg placeholder-gray-600">
+                            <select id="register-department" class="w-full p-3 mb-4 bg-white/50 rounded-lg text-gray-700"></select>
+                            <select id="register-position" class="w-full p-3 mb-4 bg-white/50 rounded-lg text-gray-700">
+                                <option value="">Select Position</option><option value="HOD">HOD</option><option value="Class Advisor">Class Advisor</option><option value="Professor">Professor</option>
+                            </select>
+                            <input id="register-password" type="password" placeholder="Password" class="w-full p-3 mb-4 bg-white/50 rounded-lg placeholder-gray-600">
+                            <button data-action="register" class="w-full bg-white text-[#6A0DAD] font-bold py-3 rounded-lg shadow-md mb-4">Register</button>
+                            <a href="#" data-view="login" class="text-white hover:underline">Back to Login</a>
+                        </div>
+                    </div>`,
+                department: () => {
+                    const deptsToShow = state.currentStaff.position === 'HOD' ? [state.currentStaff.department] : DEPARTMENTS;
+                    return `
+                        <div class="view active">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Select Department</h2>
+                            <div class="space-y-3">
+                                ${deptsToShow.map(dept => `<button data-action="selectDept" data-dept="${dept}" class="w-full flex items-center p-4 bg-white rounded-lg shadow-md hover:bg-gray-50"><span class="font-semibold text-gray-700">${dept}</span></button>`).join('')}
+                            </div>
+                        </div>`;
+                },
+                year: () => `
+                    <div class="view active">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">Select Year</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${[1, 2, 3, 4].map(year => `<button data-action="selectYear" data-year="${year}" class="flex flex-col items-center justify-center p-6 bg-purple-600 text-white rounded-2xl shadow-lg h-32 hover:bg-purple-700"><span class="text-4xl font-extrabold">${year}</span><span class="font-semibold">${year}${util.getYearSuffix(year)} Year</span></button>`).join('')}
+                        </div>
+                    </div>`,
+                studentManagement: () => `
+                    <div class="view active">
+                        <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                            <h3 class="font-bold text-lg mb-2">Add New Student</h3>
+                            <input type="text" id="student-name-input" placeholder="Student Full Name" class="w-full p-2 mb-2 border rounded">
+                            <input type="text" id="student-regno-input" placeholder="Register Number" class="w-full p-2 mb-2 border rounded">
+                            <button data-action="addStudent" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg">Add Student</button>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg mb-2">Student List</h3>
+                            <div id="student-list-container" class="space-y-2">${logic.getStudentListHTML()}</div>
+                        </div>
+                    </div>`,
+                attendanceEntry: () => {
+                    const { subjectName } = logic.getScheduledSubject();
+                    const subjectDisplay = subjectName !== 'General'
+                        ? `<div class="bg-purple-100 text-purple-800 p-3 rounded-lg text-center mb-4"><p class="font-bold">${subjectName}</p><p class="text-sm">Scheduled for this hour</p></div>`
+                        : `<div class="bg-yellow-100 text-yellow-800 p-3 rounded-lg text-center mb-4"><p class="font-bold">No Subject Scheduled</p><p class="text-sm">Attendance will be marked as 'General'</p></div>`;
+
+                    return `
+                        <div class="view active">
+                            ${subjectDisplay}
+                            <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="attendance-date" class="text-sm font-medium">Date</label><input type="date" id="attendance-date" class="w-full p-2 border rounded mt-1" value="${new Date().toISOString().split('T')[0]}"></div>
+                                    <div><label for="attendance-hour" class="text-sm font-medium">Hour (1-8)</label><select id="attendance-hour" class="w-full p-2 border rounded mt-1">${[...Array(8).keys()].map(i => `<option value="${i+1}">Hour ${i+1}</option>`).join('')}</select></div>
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2">Mark Absentees</h3>
+                            <div id="attendance-student-list" class="space-y-2">${logic.getStudentCheckboxListHTML()}</div>
+                            <button data-action="submitAttendance" class="w-full mt-4 bg-[#8A2BE2] text-white font-bold py-3 rounded-lg shadow-md">Submit Attendance</button>
+                        </div>`;
+                },
+                reports: () => `
+                    <div class="view active">
+                        <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                            <h3 class="font-bold mb-2">Generate Student-wise Report</h3>
+                            <div class="flex space-x-2" id="period-selector">
+                                <button data-period="week" class="period-btn flex-1 bg-purple-800 text-white py-2 rounded-lg">This Week</button>
+                                <button data-period="month" class="period-btn flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">This Month</button>
+                            </div>
+                        </div>
+                        <div id="reports-placeholder" class="text-center text-gray-500 p-8">Select a class from Home to see reports.</div>
+                        <div id="student-wise-report" class="hidden"></div>
+                        <div class="bg-gray-100 p-4 rounded-lg mt-6">
+                            <h3 class="font-bold mb-2">Download Detailed Log (CSV)</h3>
+                            <p class="text-xs text-gray-600 mb-2">Generates a full attendance log for the selected class, including subjects.</p>
+                            <button data-action="downloadReport" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">Download Full Report</button>
+                        </div>
+                    </div>`,
+                manage: () => `
+                    <div class="view active space-y-4">
+                        <h2 class="text-xl font-bold text-gray-800">Management</h2>
+                        <button data-view="subjects" class="w-full text-left p-4 bg-white rounded-lg shadow-md hover:bg-gray-50 font-semibold">Manage My Subjects</button>
+                        <button data-view="timetable" class="w-full text-left p-4 bg-white rounded-lg shadow-md hover:bg-gray-50 font-semibold">Set Class Timetable</button>
+                        <button data-view="profile" class="w-full text-left p-4 bg-white rounded-lg shadow-md hover:bg-gray-50 font-semibold">My Profile</button>
+                        <button data-view="dbManager" class="w-full text-left p-4 bg-white rounded-lg shadow-md hover:bg-gray-50 font-semibold">Database Settings</button>
+                    </div>`,
+                subjects: () => `
+                    <div class="view active">
+                        <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                            <h3 class="font-bold text-lg mb-2">Add New Subject</h3>
+                            <input type="text" id="subject-name-input" placeholder="e.g., Data Structures" class="w-full p-2 mb-2 border rounded">
+                            <button data-action="addSubject" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg">Add Subject</button>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg mb-2">My Subjects</h3>
+                            <div id="subject-list-container" class="space-y-2">${logic.getSubjectListHTML()}</div>
+                        </div>
+                    </div>`,
+                timetable: () => {
+                    if (!state.selectedDept || !state.selectedYear) return `<div class="view active text-center p-8 text-gray-600">Please select a Department and Year from the Home screen first to set the timetable.</div>`;
+                    return `
+                        <div class="view active">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Set Timetable</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full border-collapse">
+                                    <thead><tr class="bg-gray-100"><th class="p-2 border">Day/Hour</th>${[...Array(8).keys()].map(h => `<th class="p-2 border">${h+1}</th>`).join('')}</tr></thead>
+                                    <tbody>${logic.getTimetableHTML()}</tbody>
+                                </table>
+                            </div>
+                            <button data-action="saveTimetable" class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-lg shadow-md">Save Timetable</button>
+                        </div>`;
+                },
+                profile: () => `
+                    <div class="view active">
+                        <div class="bg-gray-100 p-6 rounded-2xl shadow-md flex items-center space-x-4 mb-6">
+                            <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">${state.currentStaff.username.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${state.currentStaff.username}</h3>
+                                <p class="text-gray-600">${state.currentStaff.position}</p>
+                                <p class="text-gray-600">${state.currentStaff.department}</p>
+                            </div>
+                        </div>
+                        <button data-action="logout" class="w-full bg-red-500 text-white font-bold py-3 rounded-lg shadow-md">Logout</button>
+                    </div>`,
+                dbManager: () => `
+                    <div class="view active bg-white p-8 rounded-xl shadow-lg text-center">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-700">Database Management</h2>
+                        <div class="space-y-4">
+                            <button data-action="createDb" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Create & Save New</button>
+                            <label for="load-db-input" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg cursor-pointer block">Load from File</label>
+                            <input type="file" id="load-db-input" class="hidden" accept=".json">
+                            <button data-action="saveDb" id="save-db-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hidden">Save Current Changes</button>
+                        </div>
+                        <p class="text-center text-gray-600 text-sm mt-8">Finished? <a href="#" data-view="login" class="text-blue-600 hover:underline">Go to Login</a></p>
+                    </div>`,
+            },
+
+            render() {
+                const view = state.currentView;
+                const template = this.templates[view] || (() => `<div>View not found: ${view}</div>`);
+                this.mainContent.innerHTML = template();
+
+                const isAuthView = ['login', 'register', 'dbManager'].includes(view);
+                this.header.classList.toggle('hidden', isAuthView);
+                this.bottomNav.classList.toggle('hidden', isAuthView);
+                this.mainContent.classList.toggle('pb-20', !isAuthView);
+
+                if (!isAuthView) {
+                    this.headerTitle.textContent = util.getViewTitle(view);
+                    this.headerSubtitle.textContent = (state.selectedDept && state.selectedYear) ? `${state.selectedDept} - ${state.selectedYear}${util.getYearSuffix(state.selectedYear)} Year` : '';
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.view === view);
+                    });
+                }
+                
+                if (view === 'register') {
+                    const deptDropdown = document.getElementById('register-department');
+                    deptDropdown.innerHTML = '<option value="">Select Department</option>';
+                    DEPARTMENTS.forEach(d => deptDropdown.add(new Option(d, d)));
+                }
+                 if (view === 'reports' && state.selectedDept && state.selectedYear) {
+                    logic.generateReport('week');
+                }
+                if (view === 'timetable') {
+                    logic.populateTimetable();
+                }
+                if (state.db) document.getElementById('save-db-btn')?.classList.remove('hidden');
+            },
+
+            showMessage(msg, isError = false) {
+                this.messageBox.textContent = msg;
+                this.messageBox.className = `fixed top-5 left-1/2 -translate-x-1/2 z-50 p-4 text-white rounded-lg shadow-lg ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+                setTimeout(() => this.messageBox.classList.add('hidden'), 3000);
+            },
+            showModal(content) {
+                this.geminiModalContent.innerHTML = content;
+                this.geminiModal.classList.add('flex');
+                this.geminiModal.classList.remove('hidden');
+            },
+            hideModal() {
+                this.geminiModal.classList.add('hidden');
+                this.geminiModal.classList.remove('flex');
+            }
+        };
+
+        // --- Core Logic ---
+        const logic = {
+            switchView(view) {
+                state.currentView = view;
+                ui.render();
+            },
+            getStudentListHTML() {
+                if (!state.selectedDept || !state.selectedYear) return '<p class="text-center text-gray-500">Please select a department and year from the Home tab first.</p>';
+                const studentsInClass = state.db.students.filter(s => s.department === state.selectedDept && s.year == state.selectedYear);
+                if (studentsInClass.length === 0) return '<p class="text-gray-500">No students added for this class.</p>';
+                return studentsInClass.map(s => `<div class="p-2 bg-white rounded shadow-sm flex justify-between items-center"><span>${s.name} (${s.regNo})</span></div>`).join('');
+            },
+            getStudentCheckboxListHTML() {
+                if (!state.selectedDept || !state.selectedYear) return '<p class="text-center text-gray-500">Please select a class from Home first.</p>';
+                const studentsInClass = state.db.students.filter(s => s.department === state.selectedDept && s.year == state.selectedYear);
+                if (studentsInClass.length === 0) return '<p class="text-center text-gray-500">No students in this class. Please add them via the "Students" tab.</p>';
+                return studentsInClass.map(s => `
+                    <label class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                        <input type="checkbox" data-regno="${s.regNo}" class="h-5 w-5 rounded text-purple-600 focus:ring-purple-500 border-gray-300">
+                        <span class="ml-3 font-medium">${s.name}</span>
+                        <span class="ml-auto text-sm text-gray-500">${s.regNo}</span>
+                    </label>`).join('');
+            },
+            getSubjectListHTML: () => {
+                if (!state.db.subjects) return '<p>No subjects created.</p>';
+                const mySubjects = state.db.subjects.filter(s => s.staffId === state.currentStaff.id);
+                if (mySubjects.length === 0) return '<p class="text-gray-500">You have not added any subjects yet.</p>';
+                return mySubjects.map(s => `<div class="p-2 bg-white rounded shadow-sm">${s.name}</div>`).join('');
+            },
+            getTimetableHTML: () => {
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                const mySubjects = state.db.subjects.filter(s => s.staffId === state.currentStaff.id);
+                const subjectOptions = `<option value="">-</option>` + mySubjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                
+                return days.map((day, dayIndex) => `
+                    <tr>
+                        <td class="p-2 border font-semibold bg-gray-50">${day}</td>
+                        ${[...Array(8).keys()].map(hourIndex => {
+                            const hour = hourIndex + 1;
+                            return `<td class="p-1 border"><select data-day="${dayIndex}" data-hour="${hour}" class="w-full timetable-select p-1 rounded bg-transparent text-xs">${subjectOptions}</select></td>`;
+                        }).join('')}
+                    </tr>`).join('');
+            },
+            populateTimetable: () => {
+                const timetable = state.db.timetable || {};
+                const classTimetable = timetable[state.selectedDept]?.[state.selectedYear] || {};
+                document.querySelectorAll('.timetable-select').forEach(select => {
+                    const day = select.dataset.day;
+                    const hour = select.dataset.hour;
+                    select.value = classTimetable[day]?.[hour] || '';
+                });
+            },
+            getScheduledSubject: () => {
+                const today = new Date();
+                const dayIndex = today.getDay() - 1; // Monday = 0
+                const hourSelect = document.getElementById('attendance-hour');
+                const collegeHour = hourSelect ? hourSelect.value : 0;
+                
+                if (dayIndex < 0 || dayIndex > 4 || collegeHour === 0) return { subjectName: 'General', subjectId: 'general' };
+
+                const timetable = state.db.timetable || {};
+                const subjectId = timetable[state.selectedDept]?.[state.selectedYear]?.[dayIndex]?.[collegeHour] || 'general';
+                
+                if (subjectId === 'general' || !state.db.subjects) return { subjectName: 'General', subjectId: 'general' };
+                
+                const subject = state.db.subjects.find(s => s.id === subjectId);
+                return { subjectName: subject ? subject.name : 'General', subjectId };
+            },
+            generateReport(period) {
+                const placeholder = document.getElementById('reports-placeholder');
+                const studentWiseContainer = document.getElementById('student-wise-report');
+
+                if (!state.selectedDept || !state.selectedYear) {
+                    placeholder.classList.remove('hidden');
+                    studentWiseContainer.classList.add('hidden');
+                    return;
+                }
+                
+                placeholder.classList.add('hidden');
+                studentWiseContainer.classList.remove('hidden');
+
+                const { startDate, endDate } = util.getDateRange(period);
+                const studentsInClass = state.db.students.filter(s => s.department === state.selectedDept && s.year == state.selectedYear);
+                
+                let reportHTML = `<h3 class="font-bold text-lg mb-2">Student-wise Report (${util.capitalize(period)})</h3>`;
+                
+                if (studentsInClass.length === 0) {
+                    reportHTML += '<p class="text-gray-500">No students in this class.</p>';
+                } else {
+                    reportHTML += '<div class="space-y-2">';
+                    studentsInClass.forEach(student => {
+                        let totalHours = 0, presentHours = 0;
+                        Object.keys(student.attendance).forEach(dateStr => {
+                            const recordDate = new Date(dateStr);
+                            if (recordDate >= startDate && recordDate <= endDate) {
+                                const hours = student.attendance[dateStr];
+                                Object.keys(hours).forEach(hour => {
+                                    totalHours++;
+                                    if (hours[hour].status === 'P') presentHours++;
+                                });
+                            }
+                        });
+                        const percentage = totalHours > 0 ? Math.round((presentHours / totalHours) * 100) : 0;
+                        const colorClass = percentage < 75 ? 'text-red-500' : 'text-green-500';
+
+                        reportHTML += `
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                                <div>
+                                    <p class="font-semibold">${student.name}</p>
+                                    <p class="text-sm text-gray-600">Present: ${presentHours}/${totalHours} hours (<span class="font-bold ${colorClass}">${percentage}%</span>)</p>
+                                </div>
+                                <button data-action="analyzeStudent" data-studentid="${student.id}" class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">✨ Analyze</button>
+                            </div>`;
+                    });
+                    reportHTML += '</div>';
+                }
+                studentWiseContainer.innerHTML = reportHTML;
+            },
+            async callGeminiAPI(prompt) {
+                const apiKey = ""; // Canvas will provide this
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    return "Failed to get analysis. Please check console for errors.";
+                }
+            }
+        };
+
+        // --- Event Handlers using Delegation ---
+        const actions = {
+            switchView: (el) => logic.switchView(el.dataset.view),
+            createDb: () => {
+                state.db = { staff: [], students: [], subjects: [], timetable: {} };
+                ui.showMessage('New database created. Please save it.');
+                actions.saveDb();
+            },
+            saveDb: () => {
+                if (!state.db) return ui.showMessage('No database to save.', true);
+                const dataStr = JSON.stringify(state.db, null, 2);
+                const blob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pmc-complete-db-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                ui.showMessage('Database saved!');
+            },
+            loadDb: (el) => {
+                const file = el.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const loadedDb = JSON.parse(e.target.result);
+                        if (loadedDb.staff && loadedDb.students) {
+                            state.db = loadedDb;
+                            if(!state.db.subjects) state.db.subjects = [];
+                            if(!state.db.timetable) state.db.timetable = {};
+                            ui.showMessage('Database loaded successfully!');
+                            document.getElementById('save-db-btn').classList.remove('hidden');
+                        } else { ui.showMessage('Invalid DB file.', true); }
+                    } catch (err) { ui.showMessage('Error parsing DB file.', true); }
+                };
+                reader.readAsText(file);
+            },
+            register: () => {
+                if (!state.db) return ui.showMessage('Load a database first.', true);
+                const username = document.getElementById('register-username').value;
+                const email = document.getElementById('register-email').value;
+                const department = document.getElementById('register-department').value;
+                const position = document.getElementById('register-position').value;
+                const password = document.getElementById('register-password').value;
+
+                if (!username || !email || !department || !position || !password) return ui.showMessage('All fields are required.', true);
+                if (state.db.staff.find(s => s.username === username)) return ui.showMessage('Username already exists.', true);
+
+                state.db.staff.push({ id: `staff-${Date.now()}`, username, email, department, position, password });
+                ui.showMessage('Staff registered! Please save the database.');
+                ui.render();
+            },
+            login: () => {
+                if (!state.db) return ui.showMessage('Load a database first.', true);
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const staff = state.db.staff.find(s => s.username === username && s.password === password);
+                if (staff) {
+                    state.currentStaff = staff;
+                    logic.switchView('department');
+                } else { ui.showMessage('Invalid credentials.', true); }
+            },
+            logout: () => {
+                state.currentStaff = null;
+                state.selectedDept = null;
+                state.selectedYear = null;
+                logic.switchView('login');
+            },
+            selectDept: (el) => {
+                state.selectedDept = el.dataset.dept;
+                logic.switchView('year');
+            },
+            selectYear: (el) => {
+                state.selectedYear = el.dataset.year;
+                logic.switchView('attendanceEntry');
+            },
+            addStudent: () => {
+                if (!state.selectedDept || !state.selectedYear) return ui.showMessage('Select class from Home first.', true);
+                const name = document.getElementById('student-name-input').value;
+                const regNo = document.getElementById('student-regno-input').value;
+                if (!name || !regNo) return ui.showMessage('Name and Register No. are required.', true);
+                if (state.db.students.find(s => s.regNo.toLowerCase() === regNo.toLowerCase())) return ui.showMessage('Register number already exists.', true);
+
+                state.db.students.push({ id: `student-${Date.now()}`, name, regNo, department: state.selectedDept, year: state.selectedYear, attendance: {} });
+                ui.showMessage('Student added. Remember to save the database!');
+                ui.render();
+            },
+            addSubject: () => {
+                const name = document.getElementById('subject-name-input').value.trim();
+                if (!name) return ui.showMessage('Subject name cannot be empty.', true);
+                state.db.subjects.push({ id: `sub-${Date.now()}`, name, staffId: state.currentStaff.id });
+                ui.showMessage('Subject added. Remember to save the database!');
+                ui.render();
+            },
+            saveTimetable: () => {
+                if (!state.db.timetable[state.selectedDept]) state.db.timetable[state.selectedDept] = {};
+                if (!state.db.timetable[state.selectedDept][state.selectedYear]) state.db.timetable[state.selectedDept][state.selectedYear] = {};
+
+                document.querySelectorAll('.timetable-select').forEach(select => {
+                    const day = select.dataset.day;
+                    const hour = select.dataset.hour;
+                    const subjectId = select.value;
+                    if (!state.db.timetable[state.selectedDept][state.selectedYear][day]) {
+                        state.db.timetable[state.selectedDept][state.selectedYear][day] = {};
+                    }
+                    if (subjectId) {
+                        state.db.timetable[state.selectedDept][state.selectedYear][day][hour] = subjectId;
+                    } else {
+                        delete state.db.timetable[state.selectedDept][state.selectedYear][day][hour];
+                    }
+                });
+                ui.showMessage('Timetable saved. Remember to save the database!');
+            },
+            submitAttendance: () => {
+                const date = document.getElementById('attendance-date').value;
+                const hour = document.getElementById('attendance-hour').value;
+                const { subjectId } = logic.getScheduledSubject();
+                
+                const absentCheckboxes = document.querySelectorAll('#attendance-student-list input[type="checkbox"]:checked');
+                const absentRegNos = Array.from(absentCheckboxes).map(cb => cb.dataset.regno);
+
+                const studentsInClass = state.db.students.filter(s => s.department === state.selectedDept && s.year == state.selectedYear);
+                studentsInClass.forEach(student => {
+                    if (!student.attendance[date]) student.attendance[date] = {};
+                    student.attendance[date][hour] = { status: absentRegNos.includes(student.regNo) ? 'A' : 'P', subjectId };
+                });
+                ui.showMessage(`Attendance for Hour ${hour} recorded. Save DB to persist.`);
+            },
+            selectPeriod: (el) => {
+                document.querySelectorAll('.period-btn').forEach(b => b.className = 'period-btn flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg');
+                el.className = 'period-btn flex-1 bg-purple-800 text-white py-2 rounded-lg';
+                logic.generateReport(el.dataset.period);
+            },
+            shareReport: () => {
+                const periodEl = document.querySelector('.period-btn.bg-purple-800');
+                if (!periodEl) return ui.showMessage('Please generate a report first.', true);
+                
+                const hod = state.db.staff.find(s => s.department === state.selectedDept && s.position === 'HOD');
+                const advisor = state.db.staff.find(s => s.department === state.selectedDept && s.position === 'Class Advisor');
+                const emails = [hod?.email, advisor?.email].filter(Boolean);
+                if(emails.length === 0) return ui.showMessage('No HOD or Advisor email found for this department.', true);
+                
+                // This part is left as an exercise for the user to implement based on their needs
+                ui.showMessage(`This would open an email to: ${emails.join(', ')}`, false);
+            },
+            downloadReport: () => {
+                if (!state.db || !state.selectedDept || !state.selectedYear) return ui.showMessage('Select a class first.', true);
+                const studentsInClass = state.db.students.filter(s => s.department === state.selectedDept && s.year == state.selectedYear);
+                if (studentsInClass.length === 0) return ui.showMessage('No students in this class.', true);
+
+                let csvContent = "data:text/csv;charset=utf-8,Date,Hour,Register Number,Name,Department,Year,Subject,Status\r\n";
+
+                studentsInClass.forEach(student => {
+                    Object.keys(student.attendance).sort().forEach(date => {
+                        Object.keys(student.attendance[date]).sort((a,b) => a-b).forEach(hour => {
+                            const record = student.attendance[date][hour];
+                            const subject = (state.db.subjects || []).find(s => s.id === record.subjectId);
+                            const subjectName = subject ? subject.name.replace(/,/g, '') : 'General';
+                            const status = record.status === 'P' ? 'Present' : 'Absent';
+                            let row = [date, hour, student.regNo, student.name.replace(/,/g, ''), student.department, student.year, subjectName, status].join(',');
+                            csvContent += row + '\r\n';
+                        });
+                    });
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `Full_Report_${state.selectedDept}_${state.selectedYear}yr.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+            analyzeStudent: async (el) => {
+                const studentId = el.dataset.studentid;
+                const student = state.db.students.find(s => s.id === studentId);
+                if (!student) return;
+
+                ui.showModal('<div class="flex justify-center items-center p-8"><div class="loader"></div></div>');
+
+                const period = document.querySelector('.period-btn.bg-purple-800').dataset.period;
+                const { startDate, endDate } = util.getDateRange(period);
+                
+                let absentDetails = [];
+                Object.keys(student.attendance).forEach(dateStr => {
+                    const recordDate = new Date(dateStr);
+                    if (recordDate >= startDate && recordDate <= endDate) {
+                        const hours = student.attendance[dateStr];
+                        Object.keys(hours).forEach(hour => {
+                            if (hours[hour].status === 'A') {
+                                const subject = (state.db.subjects || []).find(s => s.id === hours[hour].subjectId);
+                                absentDetails.push(`- On ${dateStr} for Hour ${hour} (Subject: ${subject ? subject.name : 'General'})`);
+                            }
+                        });
+                    }
+                });
+
+                const prompt = `Analyze the attendance of a student named ${student.name} for the selected period. Here is the list of their absences:\n${absentDetails.length > 0 ? absentDetails.join('\n') : 'This student has no absences in this period.'}\n\nBased on this data, write a concise, professional summary suitable for a teacher or parent. If attendance is good, provide positive reinforcement. If attendance is poor (more than 3 absences), express concern and suggest monitoring. Start the summary with the student's name. Keep it to 2-3 short paragraphs.`;
+
+                const analysis = await logic.callGeminiAPI(prompt);
+                ui.showModal(`<p>${analysis.replace(/\n/g, '<br>')}</p>`);
+            },
+            closeModal: () => ui.hideModal(),
+        };
+
+        // --- Utility Functions ---
+        const util = {
+            getYearSuffix: (year) => {
+                if (year == 1) return 'st'; if (year == 2) return 'nd'; if (year == 3) return 'rd'; return 'th';
+            },
+            capitalize: (s) => s.charAt(0).toUpperCase() + s.slice(1),
+            getViewTitle: (view) => {
+                const titles = { department: 'Select Department', year: state.selectedDept || 'Select Year', studentManagement: 'Manage Students', attendanceEntry: 'Take Attendance', reports: 'Reports & Analytics', manage: 'Management', subjects: 'My Subjects', timetable: 'Set Timetable', profile: 'My Profile', dbManager: 'Database Settings' };
+                return titles[view] || 'Attendance';
+            },
+            getDateRange: (period) => {
+                const today = new Date();
+                let startDate = new Date(today);
+                let endDate = new Date(today);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+
+                if (period === 'week') {
+                    startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); 
+                } else if (period === 'month') {
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                }
+                return { startDate, endDate };
+            }
+        };
+
+        // --- Central Event Listener ---
+        document.body.addEventListener('click', (e) => {
+            let target = e.target;
+            while(target && target !== document.body) {
+                const action = target.dataset.action;
+                const view = target.dataset.view;
+                const period = target.dataset.period;
+                if (action && actions[action]) { e.preventDefault(); actions[action](target); return; }
+                if (view && actions.switchView) { e.preventDefault(); actions.switchView(target); return; }
+                if (period && actions.selectPeriod) { e.preventDefault(); actions.selectPeriod(target); return; }
+                target = target.parentElement;
+            }
+        });
+        
+        document.body.addEventListener('change', (e) => {
+            if (e.target.id === 'load-db-input') actions.loadDb(e.target);
+            if (e.target.id === 'attendance-hour') ui.render(); // Re-render to update scheduled subject
+        });
+
+        // --- Initial Load ---
+        logic.switchView('login');
+    });
+    </script>
+</body>
+</html>
